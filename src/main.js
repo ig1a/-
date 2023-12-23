@@ -4,6 +4,7 @@ import pinia from "@/store"
 import router from "@/router"
 import "@/assets/css/common.css"
 import "virtual:uno.css"
+import 'element-plus/dist/index.css'
 // 路由守卫
 import "@/router/guard/guard.js"
 // 组件库图标
