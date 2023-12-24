@@ -41,14 +41,18 @@ const transfer = () => {
 			transCard: route.query.transCard,
 			money: money.value
 		}
-	}).then((res) => {
-		if (res.data.res === "success") {
-			ElMessage.success("转账成功")
-			router.push("/businessChoices")
-		} else {
-			ElMessage.error("转账失败")
-		}
 	})
+		.then((res) => {
+			if (res.data.res === "success") {
+				ElMessage.success(res.data.meg)
+				router.push("/businessChoices")
+			} else {
+				ElMessage.error(res.data.meg)
+			}
+		})
+		.catch((err) => {
+			ElMessage.error("账号不存在")
+		})
 }
 </script>
 
