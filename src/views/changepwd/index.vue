@@ -28,7 +28,7 @@ import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { User } from "@element-plus/icons-vue"
 import { ElMessage } from "element-plus"
-import axios from 'axios'
+import axios from "axios"
 
 const router = useRouter()
 
@@ -38,12 +38,14 @@ const type = ref("old")
 const oldPwd = ref("")
 const confirmOld = () => {
 	axios({
-		url: '/checkPassword', method: 'post', params: {
-			cardId: localStorage.getItem('cardId'),
+		url: "/checkPassword",
+		method: "post",
+		params: {
+			cardId: localStorage.getItem("cardId"),
 			password: oldPwd.value
 		}
-	}).then(res => {
-		if (res.data.res === 'success') {
+	}).then((res) => {
+		if (res.data.res === "success") {
 			ElMessage.success({
 				message: "旧密码校验成功"
 			})
@@ -54,7 +56,6 @@ const confirmOld = () => {
 			})
 		}
 	})
-
 }
 // 新密码
 const newPwd = ref("")
@@ -74,12 +75,14 @@ const confirmNew = () => {
 			return
 		} else {
 			axios({
-				url: "/updatePassword", method: "post", params: {
-					cardId: localStorage.getItem('cardId'),
+				url: "/updatePassword",
+				method: "post",
+				params: {
+					cardId: localStorage.getItem("cardId"),
 					password: newPwd.value
 				}
-			}).then(res => {
-				if (res.data.res === 'success') {
+			}).then((res) => {
+				if (res.data.res === "success") {
 					ElMessage.success({
 						message: "修改密码成功"
 					})

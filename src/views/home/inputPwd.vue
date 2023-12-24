@@ -20,21 +20,21 @@
 import { ref } from "vue"
 import { useRouter } from "vue-router"
 import { Lock } from "@element-plus/icons-vue"
-import axios from 'axios'
+import axios from "axios"
 const router = useRouter()
 // 登录
 const password = ref("")
 const login = async () => {
-	const cardId = localStorage.getItem('cardId')
+	const cardId = localStorage.getItem("cardId")
 	const res = await axios({
-		url: '/userLogin',
+		url: "/userLogin",
 		params: {
 			cardId,
 			password: password.value
 		},
-		method: 'post'
+		method: "post"
 	})
-	if (res.data.res === 'success') {
+	if (res.data.res === "success") {
 		ElMessage.success(res.data.meg)
 		router.push("/businessChoices")
 	} else {
