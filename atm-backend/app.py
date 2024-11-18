@@ -1,32 +1,33 @@
 from flask import Flask, jsonify, request
 from database import init_db
-from services import withdraw, deposit
+from models import db
+from services import handle_withdraw, handle_deposit, handle_balance
 
 app = Flask(__name__)
+
+# 配置数据库连接
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://username:password@localhost/atm_db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 初始化数据库
 init_db(app)
 
-
-#这是程序入口，先用flask试试（相互适合这个体积的小项目）
-
-# 取款
 @app.route('/api/withdraw', methods=['POST'])
-def handle_withdraw():
+def withdraw():
     data = request.json
-    account_id = data['account_id']
-    amount = data['amount']
-    response = withdraw(account_id, amount)
+    response = handle_withdraw(data['account_id'], data['amount'])
     return jsonify(response)
 
-
-# 存款
 @app.route('/api/deposit', methods=['POST'])
-def handle_deposit():
+def deposit():
     data = request.json
-    account_id = data['account_id']
-    amount = data['amount']
-    response = deposit(account_id, amount)
+    response = handle_deposit(data['account_id'], data['amount'])
     return jsonify(response)
 
+@app.route('/api/balance/<int:account_id>', methods=['GET'])
+def balance(account_id):
+    response = handle_balance(account_id)
+    return jsonify(response)
 
 if __name__ == '__main__':
     app.run(debug=True)
