@@ -1,31 +1,25 @@
-from flask_sqlalchemy import SQLAlchemy
+# models.py
 from datetime import datetime
-
-db = SQLAlchemy()
-
-
-#我对Flask不是特别熟:(
-#照着网上的写的，不确定能不能work
+from database import db
 
 
 class User(db.Model):
     __tablename__ = 'users'
-    user_id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(50), nullable=False)
-    password_hash = db.Column(db.String(256), nullable=False)
 
+    id = db.Column(db.Integer, primary_key=True)
+    card_number = db.Column(db.String(16), unique=True, nullable=False)
+    password = db.Column(db.String(128), nullable=False)  # 应存储哈希密码
+    balance = db.Column(db.Float, default=0.0, nullable=False)
 
-class Account(db.Model):
-    __tablename__ = 'accounts'
-    account_id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id'), nullable=False)
-    balance = db.Column(db.Numeric(10, 2), default=0.00)
+    transactions = db.relationship('Transaction', backref='user', lazy=True)
 
 
 class Transaction(db.Model):
     __tablename__ = 'transactions'
-    transaction_id = db.Column(db.Integer, primary_key=True)
-    account_id = db.Column(db.Integer, db.ForeignKey('accounts.account_id'), nullable=False)
-    type = db.Column(db.Enum('withdraw', 'deposit', 'transfer'), nullable=False)
-    amount = db.Column(db.Numeric(10, 2), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    type = db.Column(db.String(20), nullable=False)  # 取款、存款、转账等
+    amount = db.Column(db.Float, nullable=False)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    description = db.Column(db.String(200))  # 例如转账的对方账号
