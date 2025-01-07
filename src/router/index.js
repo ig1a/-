@@ -70,11 +70,6 @@ const payRoutes = [
 		path: "/deposit",
 		name: "Deposit",
 		component: () => import("@/views/deposit/index.vue")
-	},
-	{
-		path: "/livingpayment",
-		name: "Livingpayment",
-		component: () => import("@/views/livingpayment/index.vue")
 	}
 ]
 const router = createRouter({

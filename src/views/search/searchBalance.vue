@@ -1,64 +1,61 @@
 <template>
-	<div class="flex justify-around items-center">
-		<div class="text-center">
-			<div class="text-6 mb-10">
-				<div>余额信息</div>
-				<!-- <div>BALANCE INFORMATION</div> -->
-			</div>
-			<el-card body-class="w-100 h-60">
-				<div class="flex flex-col gap-15 items-start">
-					<div class="flex flex-col items-start">
-						<span class="text-6">余额：{{ balance }}</span>
-						<span>Amount Balance</span>
-					</div>
-					<div class="flex flex-col items-start">
-						<span class="text-6"
-							>可用余额：{{ savingType ? 0 : balance }}</span
-						>
-						<span>Available Amount Balance</span>
-					</div>
-					<!-- <div class="text-6">ATM当前可取现金额：10,000</div> -->
+	<div class="business-page">
+		<div class="business-container">
+			<div class="balance-card">
+				<div class="balance-header">
+					<el-icon class="icon"><Wallet /></el-icon>
+					<span class="title">账户余额</span>
 				</div>
-			</el-card>
-			<div class="color-gray mt-10">
-				提示：如您无需办理其他业务，请取走银行卡
+				<div class="balance-amount">
+					<span class="currency">¥</span>
+					<span class="amount">{{ balance }}</span>
+				</div>
+				<div class="account-info">
+					<div class="info-item">
+						<span class="label">账户类型：</span>
+						<span class="value">{{ savingType }}</span>
+					</div>
+					<div class="info-item">
+						<span class="label">卡号：</span>
+						<span class="value">{{ cardId }}</span>
+					</div>
+				</div>
 			</div>
-		</div>
-		<div class="flex flex-col gap-6">
-			<el-button @click="router.push('/withdrawal')">{{
-				$t("withdrawal")
-			}}</el-button>
-			<el-button @click="router.push('/transfer')">{{
-				$t("transfer")
-			}}</el-button>
-			<el-button class="color-green!" @click="router.back()">{{
-				$t("back")
-			}}</el-button>
-			<el-button class="color-red!" @click="logOut">{{
-				$t("exit")
-			}}</el-button>
+
+			<div class="action-buttons">
+				<div class="action-button" @click="router.push('/search/searchDetail')">
+					<el-icon class="icon"><Document /></el-icon>
+					<span class="text">交易明细</span>
+				</div>
+				<div class="action-button" @click="router.push('/businessChoices')">
+					<el-icon class="icon"><Back /></el-icon>
+					<span class="text">返回</span>
+				</div>
+				<div class="action-button exit" @click="logOut">
+					<el-icon class="icon"><SwitchButton /></el-icon>
+					<span class="text">退卡</span>
+				</div>
+			</div>
 		</div>
 	</div>
 </template>
 
 <script setup>
-import { onMounted, ref } from "vue"
+import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import axios from "axios"
+import { ElMessage } from "element-plus"
 import useCardStore from "@/store/card.js"
-
-const { logout } = useCardStore()
+import { Wallet, Document, Back, SwitchButton } from '@element-plus/icons-vue'
 
 const router = useRouter()
-// 余额
+const cardStore = useCardStore()
+const { logout } = cardStore
+
 const balance = ref(0)
-// 是否定期
-const savingType = ref(false)
-// 退卡
-const logOut = () => {
-	logout()
-	router.push("/")
-}
+const savingType = ref("")
+const cardId = ref(localStorage.getItem("cardId"))
+
 onMounted(() => {
 	axios({
 		url: "/getMoney",
@@ -75,12 +72,135 @@ onMounted(() => {
 		}
 	})
 })
+
+const logOut = () => {
+	logout()
+	router.push("/")
+}
 </script>
 
 <style lang="scss" scoped>
-.main {
+.business-page {
+	min-height: 100vh;
+	padding: 3.5rem 2rem 2rem;
 	display: flex;
-	justify-content: space-between;
+	justify-content: center;
 	align-items: center;
+	background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+}
+
+.business-container {
+	background: rgba(255, 255, 255, 0.9);
+	backdrop-filter: blur(10px);
+	border-radius: 20px;
+	padding: 2rem;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+	width: 100%;
+	max-width: 800px;
+}
+
+.balance-card {
+	background: linear-gradient(135deg, #409EFF 0%, #36a3f7 100%);
+	border-radius: 20px;
+	padding: 2rem;
+	color: white;
+	margin-bottom: 2rem;
+	box-shadow: 0 8px 32px rgba(64, 158, 255, 0.2);
+}
+
+.balance-header {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-bottom: 1.5rem;
+
+	.icon {
+		font-size: 1.5rem;
+	}
+
+	.title {
+		font-size: 1.2rem;
+		font-weight: 500;
+	}
+}
+
+.balance-amount {
+	font-size: 2.5rem;
+	font-weight: 600;
+	margin-bottom: 1.5rem;
+
+	.currency {
+		font-size: 2rem;
+		margin-right: 0.5rem;
+	}
+}
+
+.account-info {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+
+	.info-item {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+
+		.label {
+			opacity: 0.8;
+		}
+
+		.value {
+			font-weight: 500;
+		}
+	}
+}
+
+.action-buttons {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1rem;
+}
+
+.action-button {
+	background: white;
+	border-radius: 15px;
+	padding: 1.2rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.8rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+
+	&:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+	}
+
+	.icon {
+		font-size: 1.8rem;
+		color: #409EFF;
+	}
+
+	.text {
+		font-size: 1rem;
+		font-weight: 500;
+		color: #2c3e50;
+	}
+
+	&.exit {
+		.icon {
+			color: #f56c6c;
+		}
+
+		.text {
+			color: #f56c6c;
+		}
+
+		&:hover {
+			background: #fff1f0;
+		}
+	}
 }
 </style>

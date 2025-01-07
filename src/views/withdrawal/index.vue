@@ -1,188 +1,298 @@
 <template>
-	<!-- P1 -->
-	<div v-loading="loading" element-loading-text="取款中..." v-if="stateNumber === 0"
-		class="wd-box flex items-start w-full p-8!">
-		<div class="wd-left-sidebar flex flex-col items-end gap-8">
-			<el-button class="w-30! h-15! fw-700! opacity-80" @click="wdInputValue(100)">100</el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-80" @click="wdInputValue(200)">200</el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-80" @click="wdInputValue(500)">500</el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-80" @click="wdInputValue(1000)">1000</el-button>
-		</div>
-
-		<div class="wd-content items-center flex flex-col w-full p-4 h-full!">
-			<h1 class="mb-16! text-5! font-900! p-t-4! color-#333">
-				请选择或输入取款金额
-			</h1>
-			<input ref="inputInsert" type="number" v-model.number="wdInput" class="p-1.5! w-80% max-w-2xl opacity-80 mb-40!"
-				:readonly="isReadonly" />
-			<div class="text-3 text-center">
-				<p>本机只提供100元面额人民币</p>
-				<!-- <p>且单笔体现最多不超过10000元</p> -->
-			</div>
-		</div>
-
-		<div class="wd-right-sidebar flex flex-col items-end gap-8">
-			<el-button class="w-30! h-15! fw-700! opacity-80" @click="wdInputValue(2000)">2000</el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-80" @click="isReadonly = false; inputInsert.focus()">输入金额</el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-80" @click="getCash">取款</el-button>
-			<el-button class="w-30! h-15! opacity-80 color-red! fw-700!" @click="router.back()">
-				返回</el-button>
-		</div>
-	</div>
-	<!-- P2 SUCCESSFUL -->
-	<div v-else-if="stateNumber !== 0" class="wd-box flex items-start w-full p-8! relative!">
-		<div class="wd-left-sidebar flex flex-col items-end gap-8">
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<!-- <el-button class="w-30! h-15! fw-700! opacity-80"
-				>打印凭条</el-button
-			> -->
-		</div>
-
-		<div class="wd-content items-center flex flex-col w-full p-4 h-full!">
-			<h1 class="mb-16! text-5! font-900! p-t-4! color-#333">
-				{{ stateInfo }}
-			</h1>
-			<div class="flex">
-				<div class="flex flex-col items-center">
-					<img :src="slotPic" class="w-70!" />
-					<div class="w-full text-center card h-50">
-						<img :src="moneyPic" class="w-50" />
-					</div>
+	<div class="business-page">
+		<div class="business-container">
+			<div class="amount-grid">
+				<div class="amount-item" v-for="amount in amounts" :key="amount" @click="getCash(amount)">
+					<span class="amount">¥{{ amount }}</span>
+				</div>
+				<div class="amount-item custom" @click="showCustomInput = true">
+					<el-icon class="icon"><Edit /></el-icon>
+					<span class="text">自定义金额</span>
 				</div>
 			</div>
-			<!-- <div class="text-3 text-center absolute! bottom-9">
-				<p>本机只提供100元面额人民币</p>
-				<p>且单笔体现最多不超过10000元</p>
-			</div> -->
-		</div>
 
-		<div class="wd-right-sidebar flex flex-col items-end gap-8">
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<!-- <el-button class="w-30! h-15! fw-700! opacity-80">退卡</el-button> -->
-			<el-button class="w-30! h-15! opacity-80 color-red! fw-700!" @click="stateNumber = 0">
-				返回</el-button>
+			<div class="info-section">
+				<div class="balance-info">
+					<el-icon class="icon"><Wallet /></el-icon>
+					<span class="label">当前余额：</span>
+					<span class="value">¥{{ balance }}</span>
+				</div>
+				<div class="exit-button" @click="router.push('/businessChoices')">
+					<el-icon class="icon"><Back /></el-icon>
+					<span class="text">返回</span>
+				</div>
+			</div>
+
+			<!-- 自定义金额对话框 -->
+			<el-dialog v-model="showCustomInput" title="请输入取款金额" width="30%" center>
+				<div class="custom-input">
+					<el-input-number 
+						v-model="customAmount" 
+						:min="0" 
+						:max="20000"
+						:step="100"
+						controls-position="right"
+						placeholder="请输入金额"
+					/>
+				</div>
+				<template #footer>
+					<div class="dialog-footer">
+						<el-button @click="showCustomInput = false">取消</el-button>
+						<el-button type="primary" @click="handleCustomAmount">
+							确认
+						</el-button>
+					</div>
+				</template>
+			</el-dialog>
+
+			<!-- 加载动画 -->
+			<el-dialog v-model="loading" width="20%" center :show-close="false">
+				<div class="loading-content">
+					<el-icon class="loading-icon"><Loading /></el-icon>
+					<span>正在出钞，请稍候...</span>
+				</div>
+			</el-dialog>
 		</div>
 	</div>
 </template>
 
 <script setup>
-import { ref, computed } from "vue"
+import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import { ElMessage } from "element-plus"
 import axios from "axios"
-
-// import axios from 'axios';
+import { ElMessage } from "element-plus"
+import { Edit, Wallet, Back, Loading } from '@element-plus/icons-vue'
 
 const router = useRouter()
+const balance = ref(0)
+const loading = ref(false)
+const showCustomInput = ref(false)
+const customAmount = ref(100)
 
-const inputInsert = ref(null)
-// 图片
-const slotPic = ref("")
-const moneyPic = ref("")
-// 状态信息
-const stateInfo = computed(() => {
-	if (stateNumber.value === 1) {
-		return "取款成功，请在出钞口提取现金"
-	} else {
-		return "余额不足，取款失败"
-	}
+// 预设金额选项
+const amounts = [100, 200, 500, 1000, 2000, 5000]
+
+// 获取余额
+onMounted(() => {
+	axios({
+		url: "/getMoney",
+		method: "post",
+		params: {
+			cardId: localStorage.getItem("cardId")
+		}
+	}).then((res) => {
+		if (res.data.res === "success") {
+			balance.value = res.data.object.money
+		} else {
+			ElMessage.error(res.data.meg)
+		}
+	})
 })
-// 状态编号
-const stateNumber = ref(0)
-// 金额输入
-const wdInput = ref(null)
-const isReadonly = ref(true)
-// 修改金额
-const wdInputValue = (money) => {
-	wdInput.value = money
-	isReadonly.value = true
-}
-
-// 是否自定义金额
-
-// 返回
-// const backPage = () => {
-//     router.push('/businessChoices')
-// }
 
 // 取款
-const getCash = () => {
-	if (wdInput.value % 100) {
-		alertMessage("请注意下方提示♥")
-	} else if (wdInput.value === 0 || wdInput.value === "" || wdInput.value === null) {
-		alertMessage("请您最少取100元♥")
-	} else {
-		// stateNumber.value = 1
-		// console.log(wdInput.value)
-		axios({
-			url: "/getWithdrawal", method: "post", params: {
-				cardId: localStorage.getItem('cardId'),
-				money: wdInput.value
-			}
-		}).then(res => {
-			loading.value = true
-			setTimeout(() => {
-				loading.value = false
-				if (res.data.res === 'success') {
-					stateNumber.value = 1
-					slotPic.value = new URL("../../assets/img/slot.png", import.meta.url)
-					moneyPic.value = new URL("../../assets/img/rmb.png", import.meta.url)
-				} else {
-					stateNumber.value = 2
-				}
-
-			}, 3000)
-
-
-		})
+const getCash = async (money) => {
+	if (money > balance.value) {
+		ElMessage.error("余额不足")
+		return
 	}
-	wdInput.value = null
-}
-
-// 弹窗
-const alertMessage = (textMessage) => {
-	ElMessage({
-		message: textMessage,
-		type: "error"
+	loading.value = true
+	const res = await axios({
+		url: "/withdrawal",
+		method: "post",
+		params: {
+			cardId: localStorage.getItem("cardId"),
+			money: money
+		}
 	})
+	if (res.data.res === "success") {
+		ElMessage.success(res.data.meg)
+		balance.value = res.data.object
+		setTimeout(() => {
+			loading.value = false
+			router.push("/businessChoices")
+		}, 2000)
+	} else {
+		loading.value = false
+		ElMessage.error(res.data.meg)
+	}
 }
 
-// 加载
-const loading = ref(false)
+// 处理自定义金额
+const handleCustomAmount = () => {
+	if (customAmount.value <= 0) {
+		ElMessage.warning("请输入有效金额")
+		return
+	}
+	if (customAmount.value > 20000) {
+		ElMessage.warning("单次取款不能超过20000元")
+		return
+	}
+	showCustomInput.value = false
+	getCash(customAmount.value)
+}
 </script>
 
 <style lang="scss" scoped>
-* {
-	margin: 0;
-	padding: 0;
-	box-sizing: border-box;
+.business-page {
+	min-height: 100vh;
+	padding: 3.5rem 2rem 2rem;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
 }
 
-/* .wd-box {
-	background-color: #c8e0e4 !important;
-} */
-.card {
-	overflow-y: hidden;
-	transform: translateY(-12%);
+.business-container {
+	background: rgba(255, 255, 255, 0.9);
+	backdrop-filter: blur(10px);
+	border-radius: 20px;
+	padding: 2rem;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+	width: 100%;
+	max-width: 800px;
+}
 
-	img {
-		animation: move 2s ease-out infinite backwards;
-		border-radius: 20px;
+.amount-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1.5rem;
+	margin-bottom: 2rem;
+}
+
+.amount-item {
+	background: white;
+	border-radius: 15px;
+	padding: 1.5rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+
+	&:hover {
+		transform: translateY(-5px);
+		box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+		background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
 	}
 
-	@keyframes move {
-		0% {
-			transform: translateY(-100%);
+	&.custom {
+		background: #f0f9ff;
+
+		&:hover {
+			background: #e6f4ff;
 		}
 
-		100% {
-			transform: translateY(100%);
+		.icon {
+			font-size: 2rem;
+			color: #409EFF;
 		}
+
+		.text {
+			font-size: 1.1rem;
+			font-weight: 500;
+			color: #409EFF;
+		}
+	}
+
+	.amount {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #2c3e50;
+	}
+}
+
+.info-section {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 2rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.balance-info {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+
+	.icon {
+		font-size: 1.5rem;
+		color: #67c23a;
+	}
+
+	.label {
+		font-size: 1.1rem;
+		color: #606266;
+	}
+
+	.value {
+		font-size: 1.3rem;
+		font-weight: 600;
+		color: #67c23a;
+	}
+}
+
+.exit-button {
+	background: #f4f4f5;
+	border-radius: 12px;
+	padding: 0.8rem 1.2rem;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+
+	&:hover {
+		background: #e9e9eb;
+	}
+
+	.icon {
+		font-size: 1.2rem;
+		color: #606266;
+	}
+
+	.text {
+		font-size: 1rem;
+		font-weight: 500;
+		color: #606266;
+	}
+}
+
+.custom-input {
+	display: flex;
+	justify-content: center;
+	padding: 1rem 0;
+}
+
+.dialog-footer {
+	display: flex;
+	justify-content: center;
+	gap: 1rem;
+	padding-top: 1rem;
+}
+
+.loading-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+	padding: 1rem;
+
+	.loading-icon {
+		font-size: 2rem;
+		color: #409EFF;
+		animation: rotate 1s linear infinite;
+	}
+}
+
+@keyframes rotate {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
 	}
 }
 </style>

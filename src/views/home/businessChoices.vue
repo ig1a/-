@@ -22,10 +22,6 @@
 					<el-icon class="icon"><Lock /></el-icon>
 					<span class="text">{{ $t("changePwd") }}</span>
 				</div>
-				<div class="business-item" @click="router.push('/livingpayment')">
-					<el-icon class="icon"><Service /></el-icon>
-					<span class="text">{{ $t("pay") }}</span>
-				</div>
 			</div>
 			<div class="exit-button" @click="logOut">
 				<el-icon class="icon"><SwitchButton /></el-icon>
@@ -38,7 +34,7 @@
 <script setup>
 import { useRouter } from "vue-router"
 import useCardStore from "@/store/card.js"
-import { Search, Money, Wallet, Plus, Lock, Service, SwitchButton } from '@element-plus/icons-vue'
+import { Search, Money, Wallet, Plus, Lock, SwitchButton } from '@element-plus/icons-vue'
 
 const { logout } = useCardStore()
 const router = useRouter()

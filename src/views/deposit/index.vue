@@ -1,179 +1,393 @@
 <template>
-	<!-- S1 -->
-	<!-- <div v-show="stateNumber === 0" class="wd-box flex items-start w-full p-8! relative!">
+	<div class="business-page">
+		<div class="business-container">
+			<div class="deposit-form">
+				<div class="form-header">
+					<el-icon class="icon"><Money /></el-icon>
+					<span class="title">存款</span>
+				</div>
 
-        <div class="wd-left-sidebar flex flex-col items-end gap-8">
-            <el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-            <el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-            <el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-            <el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-        </div>
+				<div class="form-content">
+					<div class="balance-card">
+						<div class="balance-header">当前余额</div>
+						<div class="balance-amount">
+							<span class="currency">¥</span>
+							<span class="number">{{ balance }}</span>
+						</div>
+					</div>
 
-        <div class="wd-content items-center flex flex-col w-full p-4 h-full!">
-            <h1 class="mb-16! text-5! font-900! p-t-4! color-#333">请将现金放入存款槽</h1>
-            <div class="text-3 text-center absolute! bottom-9">
-                <p>本机只提供100元面额人民币</p>
-                <p>且单笔体现最多不超过10000元</p>
-            </div>
-        </div>
+					<div class="amount-section">
+						<div class="section-title">
+							<el-icon><Wallet /></el-icon>
+							<span>选择存款金额</span>
+						</div>
+						
+						<div class="amount-grid">
+							<div 
+								v-for="amount in presetAmounts" 
+								:key="amount"
+								class="amount-item"
+								:class="{ active: selectedAmount === amount }"
+								@click="selectedAmount = amount"
+							>
+								<span class="amount-value">¥{{ amount }}</span>
+							</div>
+							<div 
+								class="amount-item custom"
+								:class="{ active: isCustomAmount }"
+								@click="showCustomAmountInput"
+							>
+								<span class="amount-value">自定义金额</span>
+							</div>
+						</div>
+					</div>
 
-        <div class="wd-right-sidebar flex flex-col items-end gap-8">
-            <el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-            <el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-            <el-button class="w-30! h-15! fw-700! opacity-80">退卡</el-button>
-            <el-button class="w-30! h-15! opacity-80 color-red! fw-700!"> 返回</el-button>
-        </div>
-    </div> -->
+					<el-dialog
+						v-model="customAmountDialog"
+						title="输入存款金额"
+						width="300px"
+						center
+					>
+						<el-input-number
+							v-model="customAmount"
+							:min="1"
+							:max="50000"
+							:step="100"
+							controls-position="right"
+							placeholder="请输入金额"
+							class="custom-input"
+						/>
+						<template #footer>
+							<div class="dialog-footer">
+								<el-button @click="cancelCustomAmount">取消</el-button>
+								<el-button type="primary" @click="confirmCustomAmount">确定</el-button>
+							</div>
+						</template>
+					</el-dialog>
+				</div>
 
-	<!-- S2 -->
-
-	<div v-loading="loading" element-loading-text="存款中" v-show="stateNumber === 1"
-		class="wd-box flex items-start w-full p-8! relative!">
-		<div class="wd-left-sidebar flex flex-col items-end gap-8">
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-80" @click="depositMoney">放钞</el-button>
-		</div>
-
-		<div class="wd-content items-center flex flex-col w-full p-4 h-full!">
-			<h1 v-show="!isdeposit" class="mb-4! text-5! font-900! p-t-4! color-#333">
-				请将现金放入存款槽
-			</h1>
-			<div class="flex" v-show="!isdeposit">
-				<div class="flex flex-col items-center">
-					<img :src="slotPic" class="w-70!" />
-					<div class="w-full text-center card h-50">
-						<img :src="moneyPic" class="w-50" />
+				<div class="form-actions">
+					<div class="action-button confirm" @click="handleDeposit">
+						<el-icon class="icon"><Check /></el-icon>
+						<span class="text">确认存款</span>
+					</div>
+					<div class="action-button" @click="router.push('/businessChoices')">
+						<el-icon class="icon"><Back /></el-icon>
+						<span class="text">返回</span>
 					</div>
 				</div>
 			</div>
-			<h1 v-show="isdeposit" class="mb-4! text-5! font-900! p-t-4! color-#333">
-				存款信息明细
-			</h1>
-			<el-table v-show="isdeposit" :data="depositData" stripe style="width: 24rem" class="max-w-2xl! mb-14! max-h-50">
-				<el-table-column prop="num" label="面值" />
-				<el-table-column prop="counts" label="数目" />
-				<el-table-column prop="account" label="交易金额" />
-			</el-table>
+		</div>
 
-			<div class="text-3 text-center absolute! bottom-9">
-				<p>本机只提供100元面额人民币</p>
-				<!-- <p>且单笔体现最多不超过10000元</p> -->
+		<!-- 加载动画 -->
+		<el-dialog v-model="loading" width="20%" center :show-close="false">
+			<div class="loading-content">
+				<el-icon class="loading-icon"><Loading /></el-icon>
+				<span>存款处理中，请稍候...</span>
 			</div>
-		</div>
-
-		<div class="wd-right-sidebar flex flex-col items-end gap-8">
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button class="w-30! h-15! fw-700! opacity-0 hover:cursor-default"></el-button>
-			<el-button v-show="isdeposit" class="w-30! h-15! fw-700! opacity-80" @click="finishDeposit">结束放钞</el-button>
-			<el-button v-show="!isdeposit" class="color-red! w-30! h-15! fw-700! opacity-80"
-				@click="router.back()">返回</el-button>
-		</div>
+		</el-dialog>
 	</div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue"
+import { ref, computed, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import axios from "axios"
-// import { Loading } from "@element-plus/icons-vue/dist/types";
-
-const loading = ref(false)
+import { ElMessage } from "element-plus"
+import { Money, Wallet, Check, Back, Loading } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const isdeposit = ref(false)
-const depositData = ref([])
-const DEPOSIT_DATA = [
-	{
-		num: 100,
-		counts: 20,
-		account: 2000
-	},
-	{
-		num: 100,
-		counts: 14,
-		account: 1400
-	},
-	{
-		num: 100,
-		counts: 18,
-		account: 1800
-	},
-	{
-		num: 100,
-		counts: 20,
-		account: 2000
-	}
-]
-const stateNumber = ref(1)
+const loading = ref(false)
+const balance = ref(0)
 
-let numCount = 0
-const depositMoney = () => {
-	LoadWait()
-	axios({
-		url: "/saveMoney", method: "post", params: {
-			cardId: localStorage.getItem('cardId'),
-			money: DEPOSIT_DATA[numCount].account
-		}
-	}).then(res => {
-		console.log(res)
-	})
-	if (numCount === 0) isdeposit.value = true
-	depositData.value.push(DEPOSIT_DATA[numCount])
-	numCount++
-}
+// 预设金额选项
+const presetAmounts = [100, 200, 500, 1000, 2000, 5000]
+const selectedAmount = ref(null)
+const customAmount = ref(100)
+const customAmountDialog = ref(false)
 
-const finishDeposit = () => {
-	isdeposit.value = false
-	numCount = 0
-	depositData.value = []
-}
-
-const LoadWait = () => {
-	loading.value = true
-	setTimeout(() => {
-		loading.value = false
-	}, 3000)
-}
-// 动画
-const slotPic = ref("")
-const moneyPic = ref("")
-onMounted(() => {
-	slotPic.value = new URL("../../assets/img/slot.png", import.meta.url)
-	moneyPic.value = new URL("../../assets/img/rmb.png", import.meta.url)
+const isCustomAmount = computed(() => {
+	return !presetAmounts.includes(selectedAmount.value) && selectedAmount.value !== null
 })
+
+// 获取余额
+onMounted(() => {
+	axios({
+		url: "/getMoney",
+		method: "post",
+		params: {
+			cardId: localStorage.getItem("cardId")
+		}
+	}).then((res) => {
+		if (res.data.res === "success") {
+			balance.value = res.data.object.money
+		} else {
+			ElMessage.error(res.data.meg)
+		}
+	})
+})
+
+// 显示自定义金额输入框
+const showCustomAmountInput = () => {
+	customAmountDialog.value = true
+}
+
+// 取消自定义金额
+const cancelCustomAmount = () => {
+	customAmountDialog.value = false
+	if (!presetAmounts.includes(selectedAmount.value)) {
+		selectedAmount.value = null
+	}
+}
+
+// 确认自定义金额
+const confirmCustomAmount = () => {
+	if (customAmount.value > 50000) {
+		ElMessage.warning("单次存款不能超过50000元")
+		return
+	}
+	selectedAmount.value = customAmount.value
+	customAmountDialog.value = false
+}
+
+// 处理存款
+const handleDeposit = async () => {
+	if (!selectedAmount.value) {
+		ElMessage.warning("请选择或输入存款金额")
+		return
+	}
+
+	loading.value = true
+	try {
+		const res = await axios({
+			url: "/deposit",
+			method: "post",
+			params: {
+				cardId: localStorage.getItem("cardId"),
+				money: selectedAmount.value
+			}
+		})
+
+		if (res.data.res === "success") {
+			ElMessage.success("存款成功")
+			balance.value = res.data.object
+			setTimeout(() => {
+				loading.value = false
+				router.push("/businessChoices")
+			}, 2000)
+		} else {
+			loading.value = false
+			ElMessage.error(res.data.meg)
+		}
+	} catch (error) {
+		loading.value = false
+		ElMessage.error("存款失败，请稍后重试")
+	}
+}
 </script>
 
 <style lang="scss" scoped>
-* {
-	margin: 0;
-	padding: 0;
-	box-sizing: border-box;
+.business-page {
+	min-height: 100vh;
+	padding: 3.5rem 2rem 2rem;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
 }
 
-/* .wd-box {
-	background-color: #c8e0e4 !important;
-} */
+.business-container {
+	background: rgba(255, 255, 255, 0.9);
+	backdrop-filter: blur(10px);
+	border-radius: 20px;
+	padding: 2rem;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+	width: 100%;
+	max-width: 600px;
+}
 
-.card {
-	overflow-y: hidden;
-	transform: translateY(-12%);
+.deposit-form {
+	.form-header {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 2rem;
+		padding-bottom: 1rem;
+		border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 
-	img {
-		animation: move 2s ease-out infinite backwards;
-		border-radius: 20px;
+		.icon {
+			font-size: 1.8rem;
+			color: #409EFF;
+		}
+
+		.title {
+			font-size: 1.5rem;
+			font-weight: 600;
+			color: #2c3e50;
+		}
 	}
 
-	@keyframes move {
-		0% {
-			transform: translateY(100%);
+	.form-content {
+		display: flex;
+		flex-direction: column;
+		gap: 2rem;
+		margin-bottom: 2rem;
+	}
+}
+
+.balance-card {
+	background: linear-gradient(135deg, #409EFF 0%, #66b1ff 100%);
+	border-radius: 15px;
+	padding: 1.5rem;
+	color: white;
+	text-align: center;
+
+	.balance-header {
+		font-size: 1rem;
+		opacity: 0.9;
+		margin-bottom: 0.5rem;
+	}
+
+	.balance-amount {
+		font-size: 2rem;
+		font-weight: 600;
+
+		.currency {
+			font-size: 1.5rem;
+			margin-right: 0.3rem;
+		}
+	}
+}
+
+.amount-section {
+	.section-title {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 1rem;
+		color: #606266;
+		font-size: 1.1rem;
+
+		.el-icon {
+			color: #409EFF;
+		}
+	}
+}
+
+.amount-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 1rem;
+}
+
+.amount-item {
+	background: white;
+	border: 2px solid #ebeef5;
+	border-radius: 12px;
+	padding: 1rem;
+	text-align: center;
+	cursor: pointer;
+	transition: all 0.3s ease;
+
+	&:hover {
+		transform: translateY(-2px);
+		border-color: #409EFF;
+	}
+
+	&.active {
+		background: #409EFF;
+		border-color: #409EFF;
+		color: white;
+	}
+
+	.amount-value {
+		font-size: 1.1rem;
+		font-weight: 500;
+	}
+
+	&.custom {
+		background: #f5f7fa;
+
+		&.active {
+			background: #409EFF;
+		}
+	}
+}
+
+.form-actions {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 1rem;
+}
+
+.action-button {
+	background: white;
+	border-radius: 15px;
+	padding: 1rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+
+	&:hover {
+		transform: translateY(-3px);
+		box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+	}
+
+	.icon {
+		font-size: 1.5rem;
+		color: #606266;
+	}
+
+	.text {
+		font-size: 1rem;
+		font-weight: 500;
+		color: #606266;
+	}
+
+	&.confirm {
+		background: #409EFF;
+
+		.icon, .text {
+			color: white;
 		}
 
-		100% {
-			transform: translateY(-100%);
+		&:hover {
+			background: #66b1ff;
 		}
+	}
+}
+
+.loading-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+	padding: 1rem;
+
+	.loading-icon {
+		font-size: 2rem;
+		color: #409EFF;
+		animation: rotate 1s linear infinite;
+	}
+}
+
+.dialog-footer {
+	display: flex;
+	justify-content: flex-end;
+	gap: 1rem;
+	margin-top: 1rem;
+}
+
+@keyframes rotate {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
 	}
 }
 </style>

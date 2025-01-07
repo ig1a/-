@@ -1,187 +1,424 @@
 <template>
-	<div class="atm-page">
-		<div class="atm-content">
-			<div class="input-section">
-				<h2 class="title">请输入您的密码：</h2>
-				<div class="input-container">
-					<el-input
-						v-model="password"
-						placeholder="请输入您的密码"
-						:prefix-icon="Lock"
-						type="password"
-						class="password-input"
-					/>
-					<p class="input-tip">输入密码时，请注意遮挡</p>
+	<div class="business-page">
+		<div class="business-container">
+			<div class="password-form">
+				<div class="form-header">
+					<el-icon class="icon"><Key /></el-icon>
+					<span class="title">请输入密码</span>
+				</div>
+
+				<div class="form-content">
+					<div class="security-tips">
+						<el-alert
+							type="warning"
+							:closable="false"
+							show-icon
+						>
+							<template #title>
+								<div class="tips-content">
+									请注意周围环境，确保无人窥视您的密码输入
+								</div>
+							</template>
+						</el-alert>
+					</div>
+
+					<div class="password-display">
+						<div class="dots-container">
+							<div 
+								v-for="i in 6" 
+								:key="i"
+								class="password-dot"
+								:class="{ filled: password.length >= i }"
+							></div>
+						</div>
+					</div>
+
+					<div class="numpad">
+						<div class="numpad-grid">
+							<div 
+								v-for="num in shuffledNumbers" 
+								:key="num"
+								class="numpad-button"
+								@click="appendNumber(num)"
+								:class="{ disabled: password.length >= 6 }"
+							>
+								{{ num }}
+								<div class="button-highlight"></div>
+							</div>
+							<div 
+								class="numpad-button function"
+								@click="clearPassword"
+							>
+								<el-icon><Delete /></el-icon>
+								<span>清除</span>
+							</div>
+							<div 
+								class="numpad-button function"
+								@click="backspace"
+							>
+								<el-icon><Back /></el-icon>
+								<span>退格</span>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="form-actions">
+					<div class="action-button confirm" @click="handleLogin" :class="{ disabled: password.length !== 6 }">
+						<el-icon class="icon"><Check /></el-icon>
+						<span class="text">确认</span>
+					</div>
+					<div class="action-button" @click="router.push('/')">
+						<el-icon class="icon"><Close /></el-icon>
+						<span class="text">取消</span>
+					</div>
 				</div>
 			</div>
-			<div class="button-section">
-				<el-button 
-					class="atm-button confirm-button"
-					@click="handleLogin"
-				>
-					{{ $t("confirm") }}
-				</el-button>
-				<el-button 
-					class="atm-button cancel-button"
-					@click="router.push('/')"
-				>
-					{{ $t("back") }}
-				</el-button>
-			</div>
 		</div>
+
+		<!-- 加载动画 -->
+		<el-dialog v-model="loading" width="20%" center :show-close="false">
+			<div class="loading-content">
+				<el-icon class="loading-icon"><Loading /></el-icon>
+				<span>验证中，请稍候...</span>
+			</div>
+		</el-dialog>
 	</div>
 </template>
 
 <script setup>
-import { ref } from "vue"
+import { ref, onMounted, computed } from "vue"
 import { useRouter } from "vue-router"
-import { Lock } from "@element-plus/icons-vue"
 import axios from "axios"
-
-import useCardStore from "@/store/card.js"
-const { login } = useCardStore()
+import { ElMessage } from "element-plus"
+import { Key, Delete, Back, Check, Close, Loading } from '@element-plus/icons-vue'
 
 const router = useRouter()
-// 登录
+const loading = ref(false)
 const password = ref("")
-const handleLogin = async () => {
-	login("6100700240001078666")
+const numbers = ref([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
 
-	const res = await axios({
-		url: "/userLogin",
-		params: {
-			cardId:"6100700240001078666",
-			password: password.value
-		},
-		method: "post"
-	})
-	if (res.data.res === "success") {
-		ElMessage.success(res.data.meg)
-		router.push("/businessChoices")
-	} else {
-		ElMessage.error(res.data.meg)
+// 随机打乱数字键盘
+const shuffledNumbers = computed(() => {
+	const shuffled = [...numbers.value]
+	for (let i = shuffled.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
 	}
-	console.log(res.data)
+	return shuffled
+})
+
+// 添加数字
+const appendNumber = (num) => {
+	if (password.value.length < 6) {
+		password.value += num
+		if (password.value.length === 6) {
+			handleLogin()
+		}
+	}
 }
+
+// 退格
+const backspace = () => {
+	password.value = password.value.slice(0, -1)
+}
+
+// 清除密码
+const clearPassword = () => {
+	password.value = ""
+}
+
+// 处理登录
+const handleLogin = async () => {
+	if (password.value.length !== 6) {
+		ElMessage.warning("请输入6位密码")
+		return
+	}
+
+	loading.value = true
+	try {
+		// 测试用密码: 123456
+		if (password.value === "123456") {
+			ElMessage.success("验证成功")
+			setTimeout(() => {
+				loading.value = false
+				router.push("/businessChoices")
+			}, 1000)
+			return
+		}
+		
+		const res = await axios({
+			url: "/checkPassword",
+			method: "post",
+			params: {
+				cardId: localStorage.getItem("cardId"),
+				password: password.value
+			}
+		})
+
+		if (res.data.res === "success") {
+			ElMessage.success("验证成功")
+			setTimeout(() => {
+				loading.value = false
+				router.push("/businessChoices")
+			}, 1000)
+		} else {
+			loading.value = false
+			ElMessage.error(res.data.meg)
+			clearPassword()
+		}
+	} catch (error) {
+		loading.value = false
+		ElMessage.error("验证失败，请稍后重试")
+		clearPassword()
+	}
+}
+
+// 每次进入页面时重新打乱数字键盘
+onMounted(() => {
+	numbers.value = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+})
 </script>
 
 <style lang="scss" scoped>
-.atm-page {
-  min-height: 100vh;
-  padding: 3.5rem 2rem 2rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+.business-page {
+	position: fixed;
+	top: 0;
+	left: 0;
+	height: 100vh;
+	width: 100vw;
+	margin: 0;
+	padding: 2rem;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+	box-sizing: border-box;
 }
 
-.atm-content {
-  position: relative;
-  width: 100%;
-  max-width: 1200px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+.business-container {
+	background: rgba(255, 255, 255, 0.9);
+	backdrop-filter: blur(10px);
+	border-radius: 20px;
+	padding: 2rem;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+	width: 100%;
+	max-width: 450px;
+	max-height: 90vh;
+	overflow-y: auto;
 }
 
-.input-section {
-  background: white;
-  padding: 3rem;
-  border-radius: 20px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  width: 100%;
-  max-width: 500px;
-  text-align: center;
+.password-form {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
 }
 
-.title {
-  font-size: 2rem;
-  font-weight: 600;
-  color: #2c3e50;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
-  margin-bottom: 2rem;
+.form-header {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+	.icon {
+		font-size: 2rem;
+		color: #409EFF;
+	}
+
+	.title {
+		font-size: 1.5rem;
+		font-weight: 600;
+		color: #2c3e50;
+	}
 }
 
-.input-container {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
+.form-content {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
 }
 
-.password-input {
-  :deep(.el-input__wrapper) {
-    padding: 0.5rem;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    background: #f8fafc;
-  }
-
-  :deep(.el-input__inner) {
-    height: 48px;
-    font-size: 1.25rem;
-    color: #2c3e50;
-  }
-
-  :deep(.el-input__prefix) {
-    font-size: 1.25rem;
-    color: #94a3b8;
-  }
+.security-tips {
+	.tips-content {
+		font-size: 0.9rem;
+	}
 }
 
-.input-tip {
-  color: #64748b;
-  font-size: 0.875rem;
-  font-style: italic;
+.password-display {
+	background: #f5f7fa;
+	border-radius: 10px;
+	padding: 1rem;
+
+	.dots-container {
+		display: flex;
+		justify-content: space-between;
+		max-width: 240px;
+		margin: 0 auto;
+	}
 }
 
-.button-section {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  padding: 2rem;
+.password-dot {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	border: 2px solid #dcdfe6;
+	transition: all 0.2s ease;
+
+	&.filled {
+		background-color: #409EFF;
+		border-color: #409EFF;
+	}
 }
 
-.atm-button {
-  width: 160px;
-  height: 56px;
-  font-size: 1.125rem;
-  font-weight: 600;
-  border-radius: 12px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.15);
-    filter: brightness(1.1);
-  }
+.numpad {
+	margin: 1rem 0;
 
-  &:active {
-    transform: translateY(1px);
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  }
+	.numpad-grid {
+		display: grid;
+		grid-template-columns: repeat(3, 1fr);
+		gap: 1rem;
+		max-width: 360px;
+		margin: 0 auto;
+	}
 }
 
-.confirm-button {
-  background-color: #2ecc71;
-  
-  &:hover {
-    background-color: #27ae60;
-  }
+.numpad-button {
+	position: relative;
+	background: white;
+	border-radius: 10px;
+	padding: 1rem;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	font-size: 1.2rem;
+	font-weight: 500;
+	color: #2c3e50;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	border: 1px solid #ebeef5;
+	overflow: hidden;
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+
+		.button-highlight {
+			transform: scale(2);
+			opacity: 0;
+		}
+	}
+
+	&.disabled {
+		opacity: 0.6;
+		cursor: not-allowed;
+
+		&:hover {
+			transform: none;
+			box-shadow: none;
+		}
+	}
+
+	&.function {
+		font-size: 1rem;
+		background: #f5f7fa;
+
+		.el-icon {
+			margin-right: 0.5rem;
+		}
+	}
 }
 
-.cancel-button {
-  background-color: #e74c3c;
-  
-  &:hover {
-    background-color: #c0392b;
-  }
+.button-highlight {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	width: 100%;
+	height: 100%;
+	background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+	transform: translate(-50%, -50%) scale(0);
+	opacity: 1;
+	transition: all 0.3s ease;
+}
+
+.form-actions {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 1rem;
+	margin-top: 1rem;
+}
+
+.action-button {
+	background: white;
+	border-radius: 10px;
+	padding: 0.8rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	border: 1px solid #ebeef5;
+
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	}
+
+	.icon {
+		font-size: 1.2rem;
+		color: #606266;
+	}
+
+	.text {
+		font-size: 0.9rem;
+		font-weight: 500;
+		color: #606266;
+	}
+
+	&.confirm {
+		background: #409EFF;
+
+		.icon, .text {
+			color: white;
+		}
+
+		&:hover {
+			background: #66b1ff;
+		}
+
+		&.disabled {
+			background: #a0cfff;
+			cursor: not-allowed;
+
+			&:hover {
+				transform: none;
+				box-shadow: none;
+			}
+		}
+	}
+}
+
+.loading-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 1rem;
+	padding: 1rem;
+
+	.loading-icon {
+		font-size: 2rem;
+		color: #409EFF;
+		animation: rotate 2s linear infinite;
+	}
+}
+
+@keyframes rotate {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
 }
 </style>
