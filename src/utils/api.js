@@ -46,9 +46,19 @@ export const deposit = async (account_number, amount) => {
   }
 }
 
+export const getTransactions = async (account_number) => {
+  try {
+    const response = await api.get(`/transactions/${account_number}`)
+    return response.data
+  } catch (error) {
+    throw error.response?.data || error.message
+  }
+}
+
 export default {
   login,
   getBalance,
   withdraw,
-  deposit
+  deposit,
+  getTransactions
 }

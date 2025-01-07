@@ -79,96 +79,75 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from "vue"
+import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import axios from "axios"
 import * as XLSX from "xlsx"
 import useCardStore from "@/store/card.js"
 import { Document, Printer, Back, SwitchButton, Warning } from '@element-plus/icons-vue'
+import { ElMessage } from 'element-plus'
+import { getTransactions } from '@/utils/api'
 
 const router = useRouter()
-const balanceDetails = reactive([])
+const balanceDetails = ref([])
 const loading = ref(false)
 const receiptDialogVisible = ref(false)
 
 // 获取标签类型
 const getTagType = (type) => {
-	switch (type) {
-		case "存入":
-			return "success"
-		case "取款":
-			return "danger"
-		case "转账":
-			return "warning"
-		case "生活缴费":
-			return "info"
-		default:
-			return "info"
-	}
+  switch (type) {
+    case "存入":
+      return "success"
+    case "取款":
+      return "danger"
+    case "转账":
+      return "warning"
+    default:
+      return "info"
+  }
 }
 
 // 判断是否为存入
 const isDeposit = (type) => {
-	return type === "存入"
+  return type === "存入"
 }
 
 // 格式化金额
 const formatMoney = (amount) => {
-	return `¥ ${Number(amount).toLocaleString()}`
+  return `¥${amount.toFixed(2)}`
 }
 
 // 打印凭条
 const getReceipt = () => {
-	const data = balanceDetails.map((row) => ({
-		交易时间: row.transDate,
-		交易类别: row.transType,
-		交易金额: row.transMoney,
-		转账用户: row.remark
-	}))
-	const ws = XLSX.utils.json_to_sheet(data)
-	const wb = XLSX.utils.book_new()
-	XLSX.utils.book_append_sheet(wb, ws, "Sheet1")
-
-	XLSX.writeFile(wb, "凭条.xlsx")
-	receiptDialogVisible.value = false
+  const workbook = XLSX.utils.book_new()
+  const worksheet = XLSX.utils.json_to_sheet(balanceDetails.value)
+  XLSX.utils.book_append_sheet(workbook, worksheet, "交易明细")
+  XLSX.writeFile(workbook, "交易明细.xlsx")
+  receiptDialogVisible.value = false
+  ElMessage.success('打印成功！')
 }
 
 // 退卡
 const { logout } = useCardStore()
 const logOut = () => {
-	logout()
-	router.push("/")
+  logout()
+  router.push("/")
 }
 
-onMounted(() => {
-	loading.value = true
-	axios({
-		url: "/getUserRecepits",
-		method: "post",
-		params: {
-			cardId: localStorage.getItem("cardId")
-		}
-	}).then((res) => {
-		loading.value = false
-		for (let i = 0; i < res.data.length; i++) {
-			balanceDetails.push(res.data[i])
-			balanceDetails[i].transDate = balanceDetails[i].transDate
-				.replace("T", " ")
-				.slice(0, 16)
-			if (res.data[i].transType === 0) {
-				balanceDetails[i].transType = "存入"
-				balanceDetails[i].remark = res.data[i].cardId
-			} else if (res.data[i].transType === 1) {
-				balanceDetails[i].transType = "取款"
-				balanceDetails[i].remark = "无"
-			} else if (res.data[i].transType === 2) {
-				balanceDetails[i].transType = "转账"
-			} else {
-				balanceDetails[i].transType = "生活缴费"
-				balanceDetails[i].remark = "无"
-			}
-		}
-	})
+onMounted(async () => {
+  loading.value = true
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'))
+    const result = await getTransactions(userInfo.account_number)
+    if (result.success) {
+      balanceDetails.value = result.transactions
+    } else {
+      ElMessage.error(result.message || '获取交易记录失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '获取交易记录失败')
+  } finally {
+    loading.value = false
+  }
 })
 </script>
 

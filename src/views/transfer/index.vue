@@ -81,9 +81,9 @@
 <script setup>
 import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import axios from "axios"
 import { ElMessage } from "element-plus"
 import { Money, CreditCard, User, Wallet, Check, Back, Loading } from '@element-plus/icons-vue'
+import { getBalance } from '@/utils/api'
 
 const router = useRouter()
 const loading = ref(false)
@@ -95,20 +95,18 @@ const name = ref("")
 const money = ref(100)
 
 // 获取余额
-onMounted(() => {
-	axios({
-		url: "/getMoney",
-		method: "post",
-		params: {
-			cardId: localStorage.getItem("cardId")
-		}
-	}).then((res) => {
-		if (res.data.res === "success") {
-			balance.value = res.data.object.money
-		} else {
-			ElMessage.error(res.data.meg)
-		}
-	})
+onMounted(async () => {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'))
+    const result = await getBalance(userInfo.account_number)
+    if (result.success) {
+      balance.value = result.balance
+    } else {
+      ElMessage.error(result.message || '获取余额失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '获取余额失败')
+  }
 })
 
 // 处理转账

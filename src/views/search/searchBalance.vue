@@ -43,10 +43,10 @@
 <script setup>
 import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
-import axios from "axios"
 import { ElMessage } from "element-plus"
 import useCardStore from "@/store/card.js"
 import { Wallet, Document, Back, SwitchButton } from '@element-plus/icons-vue'
+import { getBalance } from '@/utils/api'
 
 const router = useRouter()
 const cardStore = useCardStore()
@@ -56,21 +56,19 @@ const balance = ref(0)
 const savingType = ref("")
 const cardId = ref(localStorage.getItem("cardId"))
 
-onMounted(() => {
-	axios({
-		url: "/getMoney",
-		method: "post",
-		params: {
-			cardId: localStorage.getItem("cardId")
-		}
-	}).then((res) => {
-		if (res.data.res === "success") {
-			balance.value = res.data.object.money
-			savingType.value = res.data.object.savingType
-		} else {
-			ElMessage.error(res.data.meg)
-		}
-	})
+onMounted(async () => {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'))
+    const result = await getBalance(userInfo.account_number)
+    if (result.success) {
+      balance.value = result.balance
+      savingType.value = "储蓄卡"  // 由于后端API简化，这里使用固定值
+    } else {
+      ElMessage.error(result.message || '获取余额失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '获取余额失败')
+  }
 })
 
 const logOut = () => {
