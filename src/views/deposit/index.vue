@@ -95,6 +95,7 @@ import { useRouter } from "vue-router"
 import axios from "axios"
 import { ElMessage } from "element-plus"
 import { Money, Wallet, Check, Back, Loading } from '@element-plus/icons-vue'
+import { getBalance, deposit } from '@/utils/api'
 
 const router = useRouter()
 const loading = ref(false)
@@ -103,7 +104,7 @@ const balance = ref(0)
 // 预设金额选项
 const presetAmounts = [100, 200, 500, 1000, 2000, 5000]
 const selectedAmount = ref(null)
-const customAmount = ref(100)
+const customAmount = ref(0)
 const customAmountDialog = ref(false)
 
 const isCustomAmount = computed(() => {
@@ -111,20 +112,18 @@ const isCustomAmount = computed(() => {
 })
 
 // 获取余额
-onMounted(() => {
-	axios({
-		url: "/getMoney",
-		method: "post",
-		params: {
-			cardId: localStorage.getItem("cardId")
-		}
-	}).then((res) => {
-		if (res.data.res === "success") {
-			balance.value = res.data.object.money
-		} else {
-			ElMessage.error(res.data.meg)
-		}
-	})
+onMounted(async () => {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'))
+    const result = await getBalance(userInfo.account_number)
+    if (result.success) {
+      balance.value = result.balance
+    } else {
+      ElMessage.error(result.message || '获取余额失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '获取余额失败')
+  }
 })
 
 // 显示自定义金额输入框
@@ -152,37 +151,43 @@ const confirmCustomAmount = () => {
 
 // 处理存款
 const handleDeposit = async () => {
-	if (!selectedAmount.value) {
-		ElMessage.warning("请选择或输入存款金额")
-		return
-	}
+  if (!selectedAmount.value && !isCustomAmount.value) {
+    ElMessage.warning('请选择或输入存款金额')
+    return
+  }
 
-	loading.value = true
-	try {
-		const res = await axios({
-			url: "/deposit",
-			method: "post",
-			params: {
-				cardId: localStorage.getItem("cardId"),
-				money: selectedAmount.value
-			}
-		})
+  const amount = isCustomAmount.value ? customAmount.value : selectedAmount.value
 
-		if (res.data.res === "success") {
-			ElMessage.success("存款成功")
-			balance.value = res.data.object
-			setTimeout(() => {
-				loading.value = false
-				router.push("/businessChoices")
-			}, 2000)
-		} else {
-			loading.value = false
-			ElMessage.error(res.data.meg)
-		}
-	} catch (error) {
-		loading.value = false
-		ElMessage.error("存款失败，请稍后重试")
-	}
+  if (amount <= 0) {
+    ElMessage.warning('请输入有效金额')
+    return
+  }
+
+  if (amount > 50000) {
+    ElMessage.warning('单次存款不能超过50000元')
+    return
+  }
+
+  loading.value = true
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'))
+    const result = await deposit(userInfo.account_number, amount)
+    
+    if (result.success) {
+      balance.value = result.new_balance
+      ElMessage.success('存款成功')
+      // 重置选择
+      selectedAmount.value = null
+      customAmount.value = 0
+      customAmountDialog.value = false
+    } else {
+      ElMessage.error(result.message || '存款失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '存款失败')
+  } finally {
+    loading.value = false
+  }
 }
 </script>
 

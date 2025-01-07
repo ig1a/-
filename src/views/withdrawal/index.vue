@@ -62,6 +62,7 @@ import { useRouter } from "vue-router"
 import axios from "axios"
 import { ElMessage } from "element-plus"
 import { Edit, Wallet, Back, Loading } from '@element-plus/icons-vue'
+import { getBalance, withdraw } from '@/utils/api'
 
 const router = useRouter()
 const balance = ref(0)
@@ -73,62 +74,57 @@ const customAmount = ref(100)
 const amounts = [100, 200, 500, 1000, 2000, 5000]
 
 // 获取余额
-onMounted(() => {
-	axios({
-		url: "/getMoney",
-		method: "post",
-		params: {
-			cardId: localStorage.getItem("cardId")
-		}
-	}).then((res) => {
-		if (res.data.res === "success") {
-			balance.value = res.data.object.money
-		} else {
-			ElMessage.error(res.data.meg)
-		}
-	})
+onMounted(async () => {
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'))
+    const result = await getBalance(userInfo.account_number)
+    if (result.success) {
+      balance.value = result.balance
+    } else {
+      ElMessage.error(result.message || '获取余额失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '获取余额失败')
+  }
 })
 
 // 取款
-const getCash = async (money) => {
-	if (money > balance.value) {
-		ElMessage.error("余额不足")
-		return
-	}
-	loading.value = true
-	const res = await axios({
-		url: "/withdrawal",
-		method: "post",
-		params: {
-			cardId: localStorage.getItem("cardId"),
-			money: money
-		}
-	})
-	if (res.data.res === "success") {
-		ElMessage.success(res.data.meg)
-		balance.value = res.data.object
-		setTimeout(() => {
-			loading.value = false
-			router.push("/businessChoices")
-		}, 2000)
-	} else {
-		loading.value = false
-		ElMessage.error(res.data.meg)
-	}
+const getCash = async (amount) => {
+  if (amount > balance.value) {
+    ElMessage.error("余额不足")
+    return
+  }
+
+  loading.value = true
+  try {
+    const userInfo = JSON.parse(localStorage.getItem('userInfo'))
+    const result = await withdraw(userInfo.account_number, amount)
+    
+    if (result.success) {
+      balance.value = result.new_balance
+      ElMessage.success('取款成功')
+      showCustomInput.value = false
+    } else {
+      ElMessage.error(result.message || '取款失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '取款失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 处理自定义金额
 const handleCustomAmount = () => {
-	if (customAmount.value <= 0) {
-		ElMessage.warning("请输入有效金额")
-		return
-	}
-	if (customAmount.value > 20000) {
-		ElMessage.warning("单次取款不能超过20000元")
-		return
-	}
-	showCustomInput.value = false
-	getCash(customAmount.value)
+  if (!customAmount.value) {
+    ElMessage.warning('请输入取款金额')
+    return
+  }
+  if (customAmount.value > 20000) {
+    ElMessage.warning('单次取款不能超过20000元')
+    return
+  }
+  getCash(customAmount.value)
 }
 </script>
 

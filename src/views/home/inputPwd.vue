@@ -92,6 +92,7 @@ import { useRouter } from "vue-router"
 import axios from "axios"
 import { ElMessage } from "element-plus"
 import { Key, Delete, Back, Check, Close, Loading } from '@element-plus/icons-vue'
+import { login } from '@/utils/api'
 
 const router = useRouter()
 const loading = ref(false)
@@ -129,49 +130,30 @@ const clearPassword = () => {
 }
 
 // 处理登录
-const handleLogin = async () => {
-	if (password.value.length !== 6) {
-		ElMessage.warning("请输入6位密码")
-		return
-	}
+async function handleLogin() {
+  if (password.value.length !== 6) {
+    return
+  }
 
-	loading.value = true
-	try {
-		// 测试用密码: 123456
-		if (password.value === "123456") {
-			ElMessage.success("验证成功")
-			setTimeout(() => {
-				loading.value = false
-				router.push("/businessChoices")
-			}, 1000)
-			return
-		}
-		
-		const res = await axios({
-			url: "/checkPassword",
-			method: "post",
-			params: {
-				cardId: localStorage.getItem("cardId"),
-				password: password.value
-			}
-		})
-
-		if (res.data.res === "success") {
-			ElMessage.success("验证成功")
-			setTimeout(() => {
-				loading.value = false
-				router.push("/businessChoices")
-			}, 1000)
-		} else {
-			loading.value = false
-			ElMessage.error(res.data.meg)
-			clearPassword()
-		}
-	} catch (error) {
-		loading.value = false
-		ElMessage.error("验证失败，请稍后重试")
-		clearPassword()
-	}
+  loading.value = true
+  try {
+    // 使用固定的测试账号
+    const accountNumber = '1234567890'
+    const result = await login(accountNumber, password.value)
+    
+    if (result.success) {
+      // 存储用户信息
+      localStorage.setItem('userInfo', JSON.stringify(result.user))
+      ElMessage.success('登录成功')
+      router.push('/businessChoices')  // 修改为正确的路由
+    } else {
+      ElMessage.error(result.message || '登录失败')
+    }
+  } catch (error) {
+    ElMessage.error(error.message || '登录失败')
+  } finally {
+    loading.value = false
+  }
 }
 
 // 每次进入页面时重新打乱数字键盘
